@@ -39,7 +39,7 @@ public class PlayerScoreboard {
             tablist = board.registerNewObjective("TabMatrix", "QubikStudios");
         }
 
-        tablist.setDisplaySlot(DisplaySlot.PLAYER_LIST);
+        tablist.setDisplaySlot(DisplaySlot.SIDEBAR);
     }
 
     public String loadPlayerTabListPrefix(Player player){
