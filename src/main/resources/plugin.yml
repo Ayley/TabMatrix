@@ -1,0 +1,5 @@
+name: TabMatrix
+version: @version@
+main: me.kleidukos.plugin.TabMatrix
+authors: [ Kleidukos ]
+prefix: "TabMatrix"
