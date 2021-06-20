@@ -1,6 +1,8 @@
 package me.kleidukos.plugin;
 
 import net.luckperms.api.LuckPerms;
+import net.luckperms.api.model.group.Group;
+import net.luckperms.api.model.user.User;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -9,9 +11,7 @@ import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class PlayerScoreboard {
 
@@ -21,10 +21,14 @@ public class PlayerScoreboard {
     private Objective tablist;
 
     private final Map<String, String> playersPrefix;
+    private final List<Group> groups;
 
     public PlayerScoreboard(LuckPerms luckPerms){
         this.luckPerms = luckPerms;
+        groups = new ArrayList<>();
         this.playersPrefix = new HashMap<>();
+
+        luckPerms.getGroupManager().loadAllGroups().thenAccept(v -> groups.addAll(luckPerms.getGroupManager().getLoadedGroups()));
 
         board = Bukkit.getScoreboardManager().getNewScoreboard();
 
@@ -39,38 +43,44 @@ public class PlayerScoreboard {
             tablist = board.registerNewObjective("TabMatrix", "QubikStudios");
         }
 
+        groups.sort(new Comparator<Group>() {
+            @Override
+            public int compare(Group o1, Group o2) {
+                if(o1.getWeight().getAsInt() < o2.getWeight().getAsInt()){
+                    return 1;
+                }else {
+                    return -1;
+                }
+            }
+        });
+
+        for (int i = 0; i < groups.size(); i++){
+            board.registerNewTeam(i + groups.get(i).getName());
+        }
+
         tablist.setDisplaySlot(DisplaySlot.SIDEBAR);
     }
 
-    public String loadPlayerTabListPrefix(Player player){
-        String prefix = luckPerms.getPlayerAdapter(Player.class).getMetaData(player).getPrefix();
-        if(prefix == null){
-            return "";
-        }
-
-        return prefix;
-    }
-
     public void addPlayerToTabList(Player player){
-        String prefix = loadPlayerTabListPrefix(player);
-
-        if(prefix.equalsIgnoreCase("")){
-            return;
-        }
+        User user = luckPerms.getPlayerAdapter(Player.class).getUser(player);
+        Group group = luckPerms.getGroupManager().getGroup(user.getPrimaryGroup());
 
         Team tempTeam = null;
         for (Team team : tablist.getScoreboard().getTeams()){
-            if(team.getName().equalsIgnoreCase(prefix)){
+            if(team.getName().contains(group.getName())){
                 tempTeam = team;
             }
         }
 
         if(tempTeam == null){
-            tempTeam = board.registerNewTeam(prefix);
+            tempTeam = board.registerNewTeam(group.getName());
         }
+        String prefix = group.getCachedData().getMetaData().getPrefix();
 
-        tempTeam.setPrefix(ChatColor.translateAlternateColorCodes('&', prefix + "&f"));
-        tempTeam.addEntry(player.getDisplayName());
+        tempTeam.setPrefix(ChatColor.translateAlternateColorCodes('&', prefix+ "&f"));
+        tempTeam.addPlayer(player);
+
+        player.setDisplayName(prefix + player.getDisplayName());
 
         getPlayersPrefix().put(player.getDisplayName(), prefix);
 
